@@ -43,17 +43,11 @@ def getBestMoveRes(board):
             bestMove = m
     return bestMove, bestVal
 
-positions = []
-moveProbs = []
-outcomes = []
-
-terminals = []
-
-def visitNodes(board):
+def visitNodes(board, positions, moveProbs, outcomes, terminals):
     term, _ = board.isTerminal()
     if(term):
         terminals.append(1)
-        return
+        return positions, moveProbs, outcomes
     else:
         bestMove, bestVal = getBestMoveRes(board)
         positions.append(board.toNetworkInput())
@@ -70,12 +64,20 @@ def visitNodes(board):
         for m in board.generateMoves():
             next = copy.deepcopy(board)
             next.applyMove(m)
-            visitNodes(next)
+            visitNodes(next, positions, moveProbs, outcomes, terminals)
 
-board = Board()
-board.setStartingPosition()
-visitNodes(board)
+def main():
+    positions = []
+    moveProbs = []
+    outcomes = []
 
-np.save("trainingdata/positions", np.array(positions))
-np.save("trainingdata/moveprobs", np.array(moveProbs))
-np.save("trainingdata/outcomes", np.array(outcomes))
+    board = Board()
+    board.setStartingPosition()
+    visitNodes(board, positions, moveProbs, outcomes, [])
+
+    np.save("trainingdata/positions", np.array(positions))
+    np.save("trainingdata/moveprobs", np.array(moveProbs))
+    np.save("trainingdata/outcomes", np.array(outcomes))
+
+if __name__ == "__main__":
+    main()

@@ -3,13 +3,15 @@ import tensorflow as tf
 from tensorflow import keras
 import numpy as np
 
-model = keras.models.load_model("networks/random_model.keras")
+def main(path):
+    model = keras.models.load_model(path)
 
-inputData = np.load("trainingdata/positions.npy")
-policyOutcomes = np.load("trainingdata/moveprobs.npy")
-valuesOutcomes = np.load("trainingdata/outcomes.npy")
+    inputData = np.load("trainingdata/positions.npy")
+    policyOutcomes = np.load("trainingdata/moveprobs.npy")
+    valuesOutcomes = np.load("trainingdata/outcomes.npy")
 
-print(policyOutcomes.shape)
+    model.fit(inputData, [policyOutcomes, valuesOutcomes], epochs=512, batch_size=16, verbose = 0)
+    model.save('networks/supervised_model.keras')
 
-model.fit(inputData, [policyOutcomes, valuesOutcomes], epochs=512, batch_size=16)
-model.save('networks/supervised_model.keras')
+if __name__ == "__main__":
+    main("networks/random_model.keras")

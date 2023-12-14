@@ -4,24 +4,16 @@ import numpy as np
 from hexapawn import Board
 import random
 
-
-model = keras.models.load_model('networks/supervised_model.keras')
-
-def fst(a):
-    return a[0]
-
-# white == random player
-# black == network
-def rand_vs_net(board):
+def rand_vs_net(board, network, _):
     record = []
-    while(not fst(board.isTerminal())):
+    while(not board.isTerminal()[0]):
         if(board.turn == Board.WHITE):
             moves = board.generateMoves()
             m = moves[random.randint(0, len(moves)-1)]
             board.applyMove(m)
             record.append(m)
         else:
-            q = model.predict(np.array([board.toNetworkInput()]))
+            q = network.predict(np.array([board.toNetworkInput()]), verbose = 0)
             masked_output = [ 0 for x in range(0,28)]
             for m in board.generateMoves():
                 m_idx = board.getNetworkOutputIndex(m)
@@ -34,22 +26,23 @@ def rand_vs_net(board):
                     sel_move = m
             board.applyMove(sel_move)
             record.append(sel_move)
-    terminal, winner = board.isTerminal()
+    _, winner = board.isTerminal()
     return winner
 
-# white random player
-# black random player
-def rand_vs_rand(board):
-    while(not fst(board.isTerminal())):
+def rand_vs_rand(board, temp, temp2):
+    while(not board.isTerminal()[0]):
         moves = board.generateMoves()
         m = moves[random.randint(0, len(moves)-1)]
         board.applyMove(m)
-    terminal, winner = board.isTerminal()
+    _, winner = board.isTerminal()
     return winner
 
-def net_vs_net(board: Board):
-    while(not fst(board.isTerminal())):
-        q = model.predict(np.array([board.toNetworkInput()]))
+def net_vs_net(board: Board, network1, network2):
+    while(not board.isTerminal()[0]):
+        if (board.turn == board.WHITE):
+            q = network1.predict(np.array([board.toNetworkInput()]), verbose = 0)
+        else:
+            q = network2.predict(np.array([board.toNetworkInput()]), verbose = 0)
         masked_output = [ 0 for x in range(0,28)]
         for m in board.generateMoves():
             m_idx = board.getNetworkOutputIndex(m)
@@ -57,13 +50,13 @@ def net_vs_net(board: Board):
         best_idx = np.argmax(masked_output)
         sel_move = board.getreverseNetworkOutputIndex(best_idx)
         board.applyMove(sel_move)
-    terminal, winner = board.isTerminal()
+    _, winner = board.isTerminal()
     return winner
 
-def net_vs_rand(board: Board):
-    while(not fst(board.isTerminal())):
+def net_vs_rand(board: Board, network, _):
+    while(not board.isTerminal()[0]):
         if (board.turn == board.WHITE):
-            q = model.predict(np.array([board.toNetworkInput()]))
+            q = network.predict(np.array([board.toNetworkInput()]), verbose = 0)
             masked_output = [ 0 for x in range(0,28)]
             for m in board.generateMoves():
                 m_idx = board.getNetworkOutputIndex(m)
@@ -79,73 +72,36 @@ def net_vs_rand(board: Board):
             moves = board.generateMoves()
             m = moves[random.randint(0, len(moves)-1)]
             board.applyMove(m)
-    terminal, winner = board.isTerminal()
+    _, winner = board.isTerminal()
     return winner
 
+def Evaluate(game_amount, function, network1 = None, network2 = None):
 
-whiteWins = 0
-blackWins = 0
+    whiteWins = 0
+    blackWins = 0
 
-for i in range(0,100):
-    board = Board()
-    board.setStartingPosition()
-    moves = board.generateMoves()
-    m = moves[random.randint(0, len(moves)-1)]
-    board.applyMove(m)
-    winner = rand_vs_net(board)
-    if(winner == board.WHITE):
-        whiteWins += 1
-    if(winner == board.BLACK):
-        blackWins += 1
+    for i in range(0,game_amount):
+        board = Board()
+        board.setStartingPosition()
+        winner = function(board, network1, network2)
+        if(winner == board.WHITE):
+            whiteWins += 1
+        if(winner == board.BLACK):
+            blackWins += 1
 
-all = whiteWins + blackWins
-print("Rand vs Net: "+str(whiteWins/all) + "/"+str(blackWins/all))
+    all = whiteWins + blackWins
+    
+    print("Player1 vs Player2: "+'{0:.2f}'.format(whiteWins/all) + "/"+'{0:.2f}'.format(blackWins/all))
 
+def main():
+    supervised = keras.models.load_model('networks/supervised_model.keras')
+    unsupervised = keras.models.load_model('networks/model_it10.keras')
 
-whiteWins = 0
-blackWins = 0
+    Evaluate(100, net_vs_net, unsupervised, supervised)
+    Evaluate(100, net_vs_rand, unsupervised)
+    Evaluate(100, net_vs_rand, supervised)
+    Evaluate(100, rand_vs_net, unsupervised)
+    Evaluate(100, rand_vs_net, supervised)
 
-for i in range(0,100):
-    board = Board()
-    board.setStartingPosition()
-    moves = board.generateMoves()
-    m = moves[random.randint(0, len(moves)-1)]
-    board.applyMove(m)
-    winner = rand_vs_rand(board)
-    if(winner == board.WHITE):
-        whiteWins += 1
-    if(winner == board.BLACK):
-        blackWins += 1
-
-all = whiteWins + blackWins
-print("Rand vs Rand: "+'{0:.2f}'.format(whiteWins/all) + "/"+'{0:.2f}'.format(blackWins/all))
-
-whiteWins = 0
-blackWins = 0
-
-for i in range(0,100):
-    board = Board()
-    board.setStartingPosition()
-    winner = net_vs_net(board)
-    if(winner == board.WHITE):
-        whiteWins += 1
-    if(winner == board.BLACK):
-        blackWins += 1
-
-all = whiteWins + blackWins
-print("Net vs Net: "+'{0:.2f}'.format(whiteWins/all) + "/"+'{0:.2f}'.format(blackWins/all))
-
-whiteWins = 0
-blackWins = 0
-
-for i in range(0,100):
-    board = Board()
-    board.setStartingPosition()
-    winner = net_vs_rand(board)
-    if(winner == board.WHITE):
-        whiteWins += 1
-    if(winner == board.BLACK):
-        blackWins += 1
-
-all = whiteWins + blackWins
-print("Net vs Rand: "+'{0:.2f}'.format(whiteWins/all) + "/"+'{0:.2f}'.format(blackWins/all))
+if __name__ == "__main__":
+    main()
