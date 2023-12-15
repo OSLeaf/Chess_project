@@ -53,6 +53,8 @@ class Board():
                     self.reverseOutputIndex[index] = (i, k)
                     index += 1
 
+    def getPosition(self):
+        return self.board
 
     def isTerminal(self):
         winner = None
