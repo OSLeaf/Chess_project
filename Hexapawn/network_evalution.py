@@ -1,4 +1,4 @@
-from hexapawn import Board
+from hexapawn_board import Board
 from Network_Objects import NeuralNetwork, Quesser
 
 def Evaluate(game_amount, network1 = None, network2 = None):
@@ -28,13 +28,13 @@ def Evaluate(game_amount, network1 = None, network2 = None):
     print("Player1 vs Player2: "+'{0:.2f}'.format(whiteWins/all) + "/"+'{0:.2f}'.format(blackWins/all))
 
 def main():
-    #Model names: Quesser(), NeuralNetwork('networks/supervised_model.keras'), NeuralNetwork('networks/model_it10.keras')
+    #Model names: Quesser(), NeuralNetwork('Hexapawn/networks/supervised_model.keras'), NeuralNetwork('Hexapawn/networks/model_it10.keras')
 
-    Evaluate(100, Quesser(), NeuralNetwork('networks/supervised_model.keras'))
-    Evaluate(100, Quesser(), NeuralNetwork('networks/model_it10.keras'))
-    Evaluate(100, NeuralNetwork('networks/supervised_model.keras'), Quesser())
-    Evaluate(100, NeuralNetwork('networks/model_it10.keras'), Quesser())
-    Evaluate(100, NeuralNetwork('networks/supervised_model.keras'), NeuralNetwork('networks/model_it10.keras'))
+    Evaluate(100, Quesser(), NeuralNetwork('Hexapawn/networks/supervised_model.keras'))
+    Evaluate(100, Quesser(), NeuralNetwork('Hexapawn/networks/model_it10.keras'))
+    Evaluate(100, NeuralNetwork('Hexapawn/networks/supervised_model.keras'), Quesser())
+    Evaluate(100, NeuralNetwork('Hexapawn/networks/model_it10.keras'), Quesser())
+    Evaluate(100, NeuralNetwork('Hexapawn/networks/supervised_model.keras'), NeuralNetwork('Hexapawn/networks/model_it10.keras'))
 
 if __name__ == "__main__":
     main()

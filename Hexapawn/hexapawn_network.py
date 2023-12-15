@@ -19,7 +19,7 @@ def main():
     model = keras.Model(inp, [policyOut, valueOut])
     model.compile(optimizer='SGD', loss={'valueHead':'mean_squared_error', 'policyHead':bce})
 
-    model.save('networks/random_model.keras')
+    model.save('Hexapawn/networks/random_model.keras')
 
 if __name__ == "__main__":
     main()

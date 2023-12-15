@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow import keras
-from hexapawn import Board
+from hexapawn_board import Board
 import numpy as np
 import random
 

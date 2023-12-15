@@ -1,4 +1,4 @@
-from hexapawn import Board
+from hexapawn_board import Board
 import copy
 import numpy as np
 
@@ -75,9 +75,9 @@ def main():
     board.setStartingPosition()
     visitNodes(board, positions, moveProbs, outcomes, [])
 
-    np.save("trainingdata/positions", np.array(positions))
-    np.save("trainingdata/moveprobs", np.array(moveProbs))
-    np.save("trainingdata/outcomes", np.array(outcomes))
+    np.save("Hexapawn/trainingdata/positions", np.array(positions))
+    np.save("Hexapawn/trainingdata/moveprobs", np.array(moveProbs))
+    np.save("Hexapawn/trainingdata/outcomes", np.array(outcomes))
 
 if __name__ == "__main__":
     main()

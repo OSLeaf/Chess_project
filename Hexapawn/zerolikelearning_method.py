@@ -1,4 +1,4 @@
-from hexapawn import Board
+from hexapawn_board import Board
 from MCST import MCTS
 from Edges_and_nodes import Node, Edge
 import numpy as np
@@ -133,7 +133,7 @@ def main(path):
         npVals = np.array(allValues)
         model.fit(npPos,[npProbs, npVals], epochs = 256, batch_size = 16, verbose = 0)
         if(i%10 == 0):
-            model.save('networks/model_it' + str(i) + '.keras')
+            model.save('Hexapawn/networks/model_it' + str(i) + '.keras')
 
 if __name__ == "__main__":
-    main("networks/random_model.keras")
+    main("Hexapawn/networks/random_model.keras")

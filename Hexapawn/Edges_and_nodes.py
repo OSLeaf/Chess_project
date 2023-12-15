@@ -1,4 +1,4 @@
-from hexapawn import Board
+from hexapawn_board import Board
 import copy
 import numpy as np
 

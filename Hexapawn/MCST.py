@@ -1,6 +1,6 @@
 import math
 from Edges_and_nodes import Edge, Node
-from hexapawn import Board
+from hexapawn_board import Board
 import random
 
 

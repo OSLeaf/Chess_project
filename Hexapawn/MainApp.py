@@ -1,4 +1,4 @@
-from hexapawn import Board
+from hexapawn_board import Board
 from Network_Objects import NeuralNetwork, Quesser
 import tkinter as tk
 from PIL import Image, ImageTk
@@ -9,9 +9,7 @@ class App(tk.Tk):
         
         self.game = Board()
         self.game.setStartingPosition()
-        self.models = [Quesser(), NeuralNetwork('networks/supervised_model.keras'), NeuralNetwork('networks/model_it10.keras')]
-        self.blackpawnimg = Image.open("images/blackpawn.png").resize((180, 180))
-        self.whitepawnimg = Image.open("images/whitepawn.png").resize((180, 180))
+        self.models = [Quesser(), NeuralNetwork('Hexapawn/networks/supervised_model.keras'), NeuralNetwork('Hexapawn/networks/model_it10.keras')]
         self.idx = int(input("Which bot: \n"))
 
 
