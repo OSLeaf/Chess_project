@@ -5,14 +5,15 @@ import time
 
 
 class MCTS():
-    def __init__(self, network):
+    def __init__(self, network, search_calls):
         self.network = network
         self.rootNode = None
         self.tau = 1.0
         self.c_puct = 1.0
+        self.seach_calls = search_calls
 
-    def uctValues(self, edge: Edge, parentN):
-        return self.c_puct * edge.P *(math.sqrt(parentN) / (1+ edge.N))
+    def uctValues(self, edge: Edge, parent: Edge):
+        return self.c_puct * edge.P *(math.sqrt(parent.N) / (1 + edge.N))
     
     def select(self, node: Node):
         if(node.isLeaf()):
@@ -21,26 +22,26 @@ class MCTS():
             maxUctChild = None
             maxUctValue = -100000000
             for edge, child_node in node.childEdgeNode:
-                uctVal = self.uctValues(edge, node.parentEdge.N)
+                uctVal = self.uctValues(edge, node.parentEdge)
                 val = edge.Q
-                if ( node.board.turn == chess.BLACK ):
+                if ( node.board.turn == chess.BLACK):
                     val = -edge.Q
-                uctValChild = val + uctVal
-                if ( uctValChild > maxUctValue ):
+                if (uctVal != None):
+                    childUctVal = val + uctVal
+                if ( childUctVal > maxUctValue ):
                     maxUctChild = child_node
-                    maxUctValue = uctValChild
+                    maxUctValue = childUctVal
             if (maxUctChild == None):
                 raise ValueError("could not identify child with best uct value")
             else:
                 return self.select(maxUctChild)
             
     def expandAndEvaluate(self, node: Node):
-        terminal = node.board.outcome()
+        terminal = node.board.is_game_over()
         if terminal:
-            v = 0.0
-            if (terminal.winner == chess.WHITE):
+            if (node.board.outcome().winner == chess.WHITE):
                 v = 1.0
-            elif (terminal.winner == chess.BLACK):
+            elif (node.board.outcome().winner == chess.BLACK):
                 v = -1.0
             else:
                 v = 0
@@ -58,17 +59,21 @@ class MCTS():
                 self.backpropagate(v, edge.parentNode.parentEdge)
 
     def search(self, rootNode: Node):
+        #First expansion
         self.rootNode = rootNode
         _ = self.rootNode.expand(self.network)
-        for i in range(0, 5):
+
+        #Select and search the best avenue of seach self.seach_calls times
+        for i in range(self.seach_calls):
             selected_node = self.select(rootNode)
             self.expandAndEvaluate(selected_node)
-        n_sum = 0
+
+        #Return the Q (average reward) values of each edge
         moveProbs = []
+        min_prob = rootNode.childEdgeNode[0][0].Q
         for (edge, _) in rootNode.childEdgeNode:
-            n_sum += edge.N
-        for (edge, node) in rootNode.childEdgeNode:
-            prob = (edge.N ** (1 / self.tau)) / (n_sum ** (1 / self.tau))
-            moveProbs.append((edge.move, prob, edge.N, edge.Q))
-        return moveProbs
+            moveProbs.append((edge.move, edge.Q))
+            if edge.Q < min_prob:
+                min_prob = edge.Q
+        return moveProbs, min_prob
 

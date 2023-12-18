@@ -1,19 +1,27 @@
 from MCST import MCTS
 from Edges_and_nodes import Node, Edge
+from chess_board import ML_Board
+from output_dic import OUTPUTINDEX, REVERSEINDEX, INDEX
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from tqdm import tqdm
-from chess_board import ML_Board
 import chess
-import time
+from training_boards import TRAINING_BOARDS
 
 class ReinfLearn():
 
-    def __init__(self, model):
-        self.model = model
+    def __init__(self, turn_amount):
+        #How many turns is the game played
+        self.turn_amount = turn_amount
 
-    def playGame(self):
+        #Setting starting position of the game
+        a = TRAINING_BOARDS
+        np.random.shuffle(a)
+        self.g = ML_Board(a[0])
+
+
+    def playGame(self, model1, model2):
 
         # the next three arrays collect the
         # positions, associated move probabilities
@@ -23,86 +31,127 @@ class ReinfLearn():
         moveProbsData = []
         valuesData = []
 
-        # set up a game with the starting position
-        g = ML_Board()
-        g.makeIndexes()
-
         # we play until we hit a final state
-        while((not g.is_game_over() and g.material_count() == -100)):
-            #print(g)
-            #print("----------------")
-            #start_time = time.time()
-            # encode the current position to the
-            # network input format
-            positionsData.append(g.convert_to_input())
+        while((not self.g.is_game_over()  and self.g.fullmove_number < self.turn_amount)):
+            if self.g.turn == chess.WHITE:
+                model = model1[0]
+                #Do not let older models dictate learning parameters
+                learn = model1[1]
+            else:
+                model = model2[0]
+                #Do not let older models dictate learning parameters
+                learn = model1[1]
+            # Save the current position
+            if learn:
+                positionsData.append(self.g.convert_to_input())
+
             # setup the MCT search
             rootEdge = Edge(None, None)
             rootEdge.N = 1
-            rootNode = Node(g, rootEdge)
-            mctsSearcher = MCTS(self.model)
-            moveProbs = mctsSearcher.search(rootNode)
-            # MCT search return move probabilities for
-            # all legal moves. To get an output vector
-            # we need to consider all (incl. illegal) moves
-            # but mask illegal moves to a probability of zero
-            outputVec = [ 0.0 for x in range(0, 4544)]
-            for (move, prob, _, _) in moveProbs:
-                move_idx = g.getNetworkOutputIndex(move)
-                outputVec[move_idx] = prob
-            # in order to explore enough positions
-            # we interpret the result of the MCT search
-            # as a multinomial distribution and randomly
-            # select (w.r.t. the probabilites) a move
-            rand_idx = np.random.multinomial(1, outputVec)
-            idx = np.where(rand_idx==1)[0][0]
-            nextMove = g.getreverseNetworkOutputIndex(idx)
-            # now we iterate through all legal moves
-            # in order to find the one corresponding
-            # to the randomly selected index
-            if(g.turn == chess.WHITE):
-                valuesData.append(1)
-            else:
-                valuesData.append(-1)
-            moveProbsData.append(outputVec)
-            g.push_san(nextMove)
-            #print("--- %s seconds --- for the whole thing ------------------------" % (time.time() - start_time))
+            rootNode = Node(self.g, rootEdge)
+            mctsSearcher = MCTS(model, 15)
+            moveProbs, min_prob = mctsSearcher.search(rootNode)
+
+            # Mask illegal moves to 0 and sift all probabilities to positive.
+            outputVec = np.array([ 0.0 for _ in range(INDEX)])
+            for (move, prob) in moveProbs:
+                move_idx = OUTPUTINDEX[str(move)]
+                outputVec[move_idx] = prob + min_prob
+
+            #Make sure that the probabilities sum to 1 and save it
+            s = np.sum(outputVec)
+            outputVec = np.array([x / s for x in outputVec])
+            if learn:
+                moveProbsData.append(outputVec)
+            # in order to explore enough positions interpret the result of the MCT search
+            # as a multinomial distribution and randomly select (w.r.t. the probabilites) a move
+            try:
+                rand_idx = np.random.multinomial(1, outputVec)
+                nextMove = REVERSEINDEX[np.argmax(rand_idx)]
+            except:
+                rand_idx = np.argmax(outputVec)
+                nextMove = REVERSEINDEX[rand_idx]
+                
+            self.g.push_san(nextMove)
+
+            #Make a assumption that white wins untill proven otherwise at the end of the game.
+            if learn:
+                if(self.g.turn == chess.WHITE):
+                    valuesData.append(1)
+                else:
+                    valuesData.append(-1)
 
         # we have reached a final state
-        winner = g.outcome()
-        if winner == None:
-            if g.material_count() > 0:
-                winner = chess.WHITE
-            else:
-                winner = chess.BLACK
-        else:
-            winner = g.outcome().winner
+        outcome = self.g.outcome()
+
+        #If white won we do not need to change anything as it was an assumption. If black wins the values should be flipped and in case of a draw the value should be 0
         for i in range(0, len(moveProbsData)):
-            if(winner == chess.BLACK):
-                valuesData[i] = valuesData[i] * -1.0
-            if(winner == chess.WHITE):
-                valuesData[i] = valuesData[i] * 1.0
-        return (positionsData, moveProbsData, valuesData)
+            if(outcome):
+                if(outcome.winner == chess.WHITE):
+                    valuesData[i] = valuesData[i] * 1.0
+                elif(outcome.winner == chess.BLACK):
+                    valuesData[i] = valuesData[i] * -1.0
+                else:
+                    valuesData[i] = valuesData[i] * 0.0
+            else:
+                if(self.g.final_calc() > 0):
+                    valuesData[i] = valuesData[i] * (float(self.g.final_calc()) / 10.0)
+                elif(self.g.final_calc() < 0):
+                    valuesData[i] = valuesData[i] * (float(self.g.final_calc()) / 10.0)
+                else:
+                    valuesData[i] = valuesData[i] * 0.0
+
+        #Remember to reset the board!
+        self.g.reset()
+
+        return positionsData, moveProbsData, valuesData
         
-def main(path):
-    model = keras.models.load_model(path)
-    mctsSearcher = MCTS(model)
-    learner = ReinfLearn(model)
-    for i in (range(0, 11)):
-        print("Training Iteration: " + str(i))
+def main(load_path, save_path):
+    #Load the training model and start iteration count
+    model = keras.models.load_model(load_path + '.keras')
+    modelVector = [model, keras.models.load_model('Chess/networks/k100.keras')]
+    ite = 171
+    errors = 0
+
+    #Train until told otherwise!
+    while True:
+        print("Training Iteration: " + str(ite))
+        learner = ReinfLearn(2 + ite // 100)
         allPos = []
         allMovProbs = []
         allValues = []
+        #try:
         for j in tqdm(range(0, 10)):
-            pos, movProbs, values = learner.playGame()
-            allPos += pos
-            allMovProbs += movProbs
-            allValues += values
+            #Last three game played against earlier networks
+            if j > 7:
+                model2 = modelVector[np.random.randint(0, len(modelVector))]
+                enemylearn = False
+            else:
+                model2 = model
+                enemylearn = True
+
+            #Played twice once with black and once with white
+            for i in [((model, True) ,(model2, enemylearn)), ((model2, enemylearn), (model, True))]:
+                pos, movProbs, values = learner.playGame(i[0], i[1])
+                allPos += pos
+                allMovProbs += movProbs
+                allValues += values
+
         npPos = np.array(allPos)
         npProbs = np.array(allMovProbs)
         npVals = np.array(allValues)
+
         model.fit(npPos,[npProbs, npVals], epochs = 256, batch_size = 16, verbose = 0)
-        if(i%10 == 0):
-            model.save('Chess/networks/model_it' + str(i) + '.keras')
+        '''except:
+            f = open("log.txt", "a")
+            f.write(str(errors) + ": " +str(ite) + "\n")
+            errors += 1'''
+
+        #Save every 20 iteration and make it a potential enemy network
+        if(ite%10 == 0):
+            model.save(save_path + str(ite) + '.keras')
+            modelVector.append(keras.models.load_model(save_path + str(ite) + '.keras'))
+        ite += 1
 
 if __name__ == "__main__":
-    main('Chess/networks/model_it0.keras')
+    main('Chess/networks/t170', 'Chess/networks/t')
