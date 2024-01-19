@@ -30,8 +30,8 @@ class Node():
             child_node = Node(child_board, child_edge)
             self.childEdgeNode.append((child_edge, child_node))
 
-        q = network.predict(np.array([self.board.convert_to_input()]), verbose = 0)
-
+        q = network.predict(np.array([[self.board.convert_to_input().reshape(14, 64)]]), verbose = 0)
+        print("hello!")
         #Compensate for illegal move probabilities so sum(edge.P) == 1
         prob_sum = 0
         for (edge,_) in self.childEdgeNode:

@@ -44,7 +44,7 @@ class MCTS():
             elif (node.board.outcome().winner == chess.BLACK):
                 v = -1.0
             else:
-                v = 0
+                v = -0.1
             self.backpropagate(v, node.parentEdge)
         else:
             v = node.expand(self.network)

@@ -20,8 +20,9 @@ class App(tk.Tk):
         boards = TRAINING_BOARDS
         np.random.shuffle(TRAINING_BOARDS)
         self.game = ML_Board(boards[0])
+        self.game = ML_Board()
 
-        self.models = [Quesser(), NeuralNetwork('Chess/networks/t180.keras')]
+        self.models = [Quesser(), NeuralNetwork('Chess/networks/sd_deep4_1035.keras')]
         self.idx = int(input("Which bot: \n"))
         self.letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
 

@@ -155,3 +155,18 @@ for i in g.generate_legal_moves():
     print(i)
 g.push_san("e1g1")
 print(g)'''
+
+
+gPos = [[[1, 1, 1], [0, 0, 0], [-1, -1, -1]], [[1, 1, 0], [0, 0, 1], [-1, -1, -1]]]
+gProb = [[('a4a5', 1), ('a1a2', 1), ('h1h2', 2)], [('a4a5', 1), ('a1a2', 1), ('h1h2', 2)]]
+gVal = [1, 2]
+
+'''npPos = np.array(gPos)
+npProb = np.array(gProb)
+npVal = np.array(gVal)
+print(npPos.shape)
+print(npProb.shape)
+print(npVal.shape)'''
+movesAndPositions = np.array([gPos, gProb, gVal])
+
+print(movesAndPositions)

@@ -10,6 +10,7 @@ class NeuralNetwork():
 
     def __init__(self, network) -> None:
         self.network = keras.models.load_model(network)
+        self.turn = 0
 
     def predict(self, board: ML_Board):
         '''rootEdge = Edge(None, None)
@@ -27,11 +28,14 @@ class NeuralNetwork():
         board.push_san(nextMove)'''
         #print(board)
         
-        q = self.network.predict(np.array([board.convert_to_input()]), verbose = 0)
+        q = self.network.predict(np.array([[board.convert_to_input().reshape(14, 64)]]), verbose = 0)
         masked_output = [ 0 for x in range(INDEX)]
         for m in board.generate_legal_moves():
             m_idx = OUTPUTINDEX[str(m)]
             masked_output[m_idx] = q[0][0][m_idx]
+        sum = 0
+        for m in masked_output:
+            sum += m
         best_idx = np.argmax(masked_output)
         sel_move = REVERSEINDEX[best_idx]
         board.push_san(sel_move)

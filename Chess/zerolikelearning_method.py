@@ -16,9 +16,7 @@ class ReinfLearn():
         self.turn_amount = turn_amount
 
         #Setting starting position of the game
-        a = TRAINING_BOARDS
-        np.random.shuffle(a)
-        self.g = ML_Board(a[0])
+        self.g = ML_Board()
 
 
     def playGame(self, model1, model2):
@@ -43,20 +41,20 @@ class ReinfLearn():
                 learn = model1[1]
             # Save the current position
             if learn:
-                positionsData.append(self.g.convert_to_input())
+                positionsData.append(np.array([self.g.convert_to_input().reshape(14, 64)]))
 
             # setup the MCT search
             rootEdge = Edge(None, None)
             rootEdge.N = 1
             rootNode = Node(self.g, rootEdge)
-            mctsSearcher = MCTS(model, 15)
+            mctsSearcher = MCTS(model, 20)
             moveProbs, min_prob = mctsSearcher.search(rootNode)
 
             # Mask illegal moves to 0 and sift all probabilities to positive.
             outputVec = np.array([ 0.0 for _ in range(INDEX)])
             for (move, prob) in moveProbs:
                 move_idx = OUTPUTINDEX[str(move)]
-                outputVec[move_idx] = prob + min_prob
+                outputVec[move_idx] = prob - min_prob
 
             #Make sure that the probabilities sum to 1 and save it
             s = np.sum(outputVec)
@@ -95,9 +93,9 @@ class ReinfLearn():
                     valuesData[i] = valuesData[i] * 0.0
             else:
                 if(self.g.final_calc() > 0):
-                    valuesData[i] = valuesData[i] * (float(self.g.final_calc()) / 10.0)
+                    valuesData[i] = valuesData[i] * (float(self.g.final_calc() * 100))
                 elif(self.g.final_calc() < 0):
-                    valuesData[i] = valuesData[i] * (float(self.g.final_calc()) / 10.0)
+                    valuesData[i] = valuesData[i] * (float(self.g.final_calc() * 100))
                 else:
                     valuesData[i] = valuesData[i] * 0.0
 
@@ -109,21 +107,21 @@ class ReinfLearn():
 def main(load_path, save_path):
     #Load the training model and start iteration count
     model = keras.models.load_model(load_path + '.keras')
-    modelVector = [model, keras.models.load_model('Chess/networks/k100.keras')]
-    ite = 171
+    modelVector = [model]
+    ite = 0
     errors = 0
 
     #Train until told otherwise!
     while True:
         print("Training Iteration: " + str(ite))
-        learner = ReinfLearn(2 + ite // 100)
+        learner = ReinfLearn(40)
         allPos = []
         allMovProbs = []
         allValues = []
         #try:
-        for j in tqdm(range(0, 10)):
+        for j in tqdm(range(0, 1)):
             #Last three game played against earlier networks
-            if j > 7:
+            if j > 20:
                 model2 = modelVector[np.random.randint(0, len(modelVector))]
                 enemylearn = False
             else:
@@ -141,17 +139,17 @@ def main(load_path, save_path):
         npProbs = np.array(allMovProbs)
         npVals = np.array(allValues)
 
-        model.fit(npPos,[npProbs, npVals], epochs = 256, batch_size = 16, verbose = 0)
+        model.fit(npPos,[npProbs, npVals], epochs = 4, batch_size = 32, verbose = 0)
         '''except:
             f = open("log.txt", "a")
             f.write(str(errors) + ": " +str(ite) + "\n")
             errors += 1'''
 
         #Save every 20 iteration and make it a potential enemy network
-        if(ite%10 == 0):
+        if(ite%200 == 0):
             model.save(save_path + str(ite) + '.keras')
             modelVector.append(keras.models.load_model(save_path + str(ite) + '.keras'))
         ite += 1
 
 if __name__ == "__main__":
-    main('Chess/networks/t170', 'Chess/networks/t')
+    main('Chess/networks/sd_deep3_1035', 'Chess/networks/d3_')
